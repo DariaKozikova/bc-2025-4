@@ -28,9 +28,14 @@ const server = http.createServer(async (req, res) => {
 
     const url = new URL(req.url, `http://${options.host}:${options.port}`);
     const showHumidity = url.searchParams.get('humidity') === 'true';
-    const minRainfall = url.searchParams.get('min_rainfall')
-      ? parseFloat(url.searchParams.get('min_rainfall'))
-      : null;
+
+    let minRainfallValue = url.searchParams.get('min_rainfall');
+    let minRainfall;
+    if (minRainfallValue) {
+      minRainfall = parseFloat(minRainfallValue);
+    } else {
+      minRainfall = null;
+    }
 
     const filteredData = data
       .filter(record => !minRainfall || record.Rainfall > minRainfall)
