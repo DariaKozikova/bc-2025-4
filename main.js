@@ -3,27 +3,13 @@ const fs = require('fs');
 const http = require('http');
 const { XMLBuilder } = require('fast-xml-parser');
 
-const filterWeatherData = (data, minRainfall, showHumidity) => {
-  return data
-    .filter(record => !minRainfall || record.Rainfall > minRainfall)
-    .map(record => {
-      const newRecord = {
-        rainfall: record.Rainfall,
-        pressure3pm: record.Pressure3pm
-      };
-      if (showHumidity) {
-        newRecord.humidity = record.Humidity3pm;
-      }
-      return newRecord;
-    });
-};
-
 program
   .option('-i, --input <path>', 'path to the JSON file')
   .option('-h, --host <host>', 'server address')
   .option('-p, --port <port>', 'server port');
 
 program.parse();
+
 const options = program.opts();
 
 if (!options.input || !options.host || !options.port) {
@@ -43,25 +29,38 @@ const server = http.createServer(async (req, res) => {
 
     const url = new URL(req.url, `http://${options.host}:${options.port}`);
     const showHumidity = url.searchParams.get('humidity') === 'true';
-
     const minRainfallValue = url.searchParams.get('min_rainfall');
-    let minRainfall;
+
+    let minRainfall = null;
     if (minRainfallValue) {
       minRainfall = parseFloat(minRainfallValue);
-    } else {
-      minRainfall = null;
     }
 
-    const filteredData = filterWeatherData(data, minRainfall, showHumidity);
+    const filteredRecords = [];
+    for (let i = 0; i < data.length; i++) {
+      const record = data[i];
+      if (!minRainfall || record.Rainfall > minRainfall) {
+        filteredRecords.push(record);
+      }
+    }
+
+    const finalData = filteredRecords.map(record => {
+      const newRecord = {
+        rainfall: record.Rainfall,
+        pressure3pm: record.Pressure3pm
+      };
+      if (showHumidity) {
+        newRecord.humidity = record.Humidity3pm;
+      }
+      return newRecord;
+    });
 
     const builder = new XMLBuilder({ format: true });
-    const xml = builder.build({ weather_data: { record: filteredData } });
+    const xml = builder.build({ weather_data: { record: finalData } });
 
     res.writeHead(200, { 'Content-Type': 'application/xml' });
     res.end(xml);
-
   } catch (err) {
-    console.error('Error:', err);
     res.writeHead(500, { 'Content-Type': 'text/plain' });
     res.end('Internal Server Error');
   }
