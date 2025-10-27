@@ -3,7 +3,7 @@ const fs = require('fs');
 const http = require('http');
 const { XMLBuilder } = require('fast-xml-parser');
 
-const filterWeatherData = (data, minRainfall = null, showHumidity = false) => {
+const filterWeatherData = (data, minRainfall, showHumidity) => {
   return data
     .filter(record => !minRainfall || record.Rainfall > minRainfall)
     .map(record => {
@@ -44,8 +44,11 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://${options.host}:${options.port}`);
     const showHumidity = url.searchParams.get('humidity') === 'true';
 
+    let minRainfall = null;
     const minRainfallValue = url.searchParams.get('min_rainfall');
-    const minRainfall = minRainfallValue ? parseFloat(minRainfallValue) : null;
+    if (minRainfallValue !== null && minRainfallValue !== '' && !isNaN(minRainfallValue)) {
+      minRainfall = parseFloat(minRainfallValue);
+    }
 
     const filteredData = filterWeatherData(data, minRainfall, showHumidity);
 
@@ -54,7 +57,9 @@ const server = http.createServer(async (req, res) => {
 
     res.writeHead(200, { 'Content-Type': 'application/xml' });
     res.end(xml);
+
   } catch (err) {
+    console.error('Error:', err);
     res.writeHead(500, { 'Content-Type': 'text/plain' });
     res.end('Internal Server Error');
   }
