@@ -44,10 +44,12 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://${options.host}:${options.port}`);
     const showHumidity = url.searchParams.get('humidity') === 'true';
 
-    let minRainfall = null;
     const minRainfallValue = url.searchParams.get('min_rainfall');
-    if (minRainfallValue !== null && minRainfallValue !== '' && !isNaN(minRainfallValue)) {
+    let minRainfall;
+    if (minRainfallValue) {
       minRainfall = parseFloat(minRainfallValue);
+    } else {
+      minRainfall = null;
     }
 
     const filteredData = filterWeatherData(data, minRainfall, showHumidity);
